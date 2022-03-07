@@ -3,6 +3,7 @@ import numpy as np
 import cv2
 from database import *
 from shapely.geometry import Polygon, Point
+from upload import uploadData
 #calculate midpoints of bottom line using bottom points of bounding boxes
 #given x,y,w,h start point always at top left corner and end point at bottom right corner
 #top left = x,y|top right = x+w,y|bottom left = x,y+h|bottom right = x+w,y+h
@@ -45,6 +46,11 @@ def isplayer(midpoints):
                 
                 
     print("court id, players", courtid, playercount) #write upload here
+    authorizationId = "2OCC9876543210"    #use this auth Id its already registered in backend and is owned ny lyndwood manager and this device is named test data upload
+    static_ip = "52.229.94.153"               #ip address of server
+    uploadData(0,playercount,authorizationId,static_ip)
+
+    uploadData
         #print(row[0],row[1])
         #print(convert_array(row[1]))
         #print(type(convert_array(row[1])))

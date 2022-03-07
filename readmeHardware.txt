@@ -8,3 +8,4 @@ pip install argparse
 pip install imutils
 pip install tk
 pip install requires.io
+pip install opencv-python
