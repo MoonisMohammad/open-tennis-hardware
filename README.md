@@ -18,6 +18,7 @@ The feature vector is then supplied to a pre-trained SVM classifier to classify 
 1. Install Java - Download and install ```Python 3``` from https://www.python.org/downloads/. 
 2. Install rails - Download and install ```Vscode``` from https://code.visualstudio.com/download
 3. In Vscode import the following python libraries numpy, shapely, pysqlite3, argparse, imutils, tk, requires.io, opencv-python
+4. Open project in vscode and run playerdetction.py in vscode
 
 
 
