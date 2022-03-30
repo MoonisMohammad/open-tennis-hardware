@@ -4,9 +4,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 # function to display the coordinates of
 # of the points clicked on the image
-arrpt = []
+
 newarrpt =[]
-def ref():
+getimage = ' '
+#arrpt = resetarr()
+arrpt=[]
+def ref(image):
     def click_event(event, x, y, flags, params):
          
         # checking for left mouse clicks
@@ -51,7 +54,11 @@ def ref():
     
      
     # reading the image
-    img = cv2.imread('playingr337.jpg',1)
+    #listimg = ['2court058.jpg', 'playingr306.jpg', ' playingr326.jpg', 'playingr337.jpg','playingr364.jpg', 'playingr383.jpg','playingr391.jpg']
+    #for image in listimg:
+        
+    img = cv2.imread(image,1)
+    getimage = img
     #plt_image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     #imgplot = plt.imshow(img)
     #dim =  (img.shape[1],img.shape[0]) #w,h
@@ -76,10 +83,16 @@ def ref():
  
     # close the window
     cv2.destroyAllWindows()
+
 #creates a numpy array using dimension provided
 # if max court = 2, a 2d array will be created
 #def setpts(maxcourt):
 #    newarrpt = np.reshape(arrpt, (maxcourt, 4))
 def getpts():
-    print(arrpt)
+    #print(arrpt)
     return arrpt
+def getimage():
+    return getimage
+def resetarr():
+    arrpt.clear()
+    

@@ -2,7 +2,7 @@ import cv2
 import imutils 
 import numpy as np
 from imutils.object_detection import non_max_suppression
-#from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt
 # Malisiewicz et al.
 
 
@@ -69,9 +69,9 @@ def non_max_suppression_fast(boxes,weights,overlapThresh):
 
 
 
-def detectperson(image):
+def detectperson(image,stride, padding, scale):
     # Initializing the HOG person 
-    hog = cv2.HOGDescriptor() 
+    hog = cv2.HOGDescriptor()
     hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector()) 
        
     # Reading the Image 
@@ -82,9 +82,9 @@ def detectperson(image):
     #dim = (960,1280)
     # image = imutils.resize(image,width=960,height=1280)
     #image = cv2.resize(image,dim,interpolation=cv2.INTER_AREA)
-    #image = crop(image)
+    #image = crop(image) #winStride=(2,2), padding=(4,4), scale=1.1
     img_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    rects, weights = hog.detectMultiScale(img_gray, winStride=(1,1), padding=(2,2), scale=1.1)
+    rects, weights = hog.detectMultiScale(img_gray, winStride= stride, padding= padding, scale= scale)
     #print("rects: ", type(rects))
     newrects = non_max_suppression(rects,overlapThresh=0.3)
     #print(type(newrects))
@@ -140,3 +140,5 @@ def detectperson(image):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
     return newrects
+if __name__=="__main__":
+    detectperson('playingr306.jpg')
