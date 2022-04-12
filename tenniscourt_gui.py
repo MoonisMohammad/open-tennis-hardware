@@ -1,20 +1,33 @@
+#@author chhavi sujeebun, updated
+
+#importing libraries required and importing the methods from other python scripts 
 import tkinter as tk
 import cv2
 import numpy as np
 import argparse
 from database import *
-#from shapely.geometry import Popint, Polygon
 from courtreference import *
 from playerdetection import *
 from upload import *
-#from database_postgres import *
+from timeit import default_timer as timer
+
+#initializing numpy arrays to store coordinates for the court with id 0 and 1
 court0_coord =[]
 court1_coord =[]
+#initializing numpy array to store the array of coordinates for all existing courts 
 courts_coord =[]
 
+
+#creategui method creates a GUI to allow an authorised user to select reference points for one or more tennis courts.
+#The reference points are then stored in a MySQL database, the image is further used for object detection and to determine
+#the number of players on each tennis court
+#@param image -is the image to be processed
+#in our case, we are using images from our dataset, however when implementd the image will be the image captured by the picamera
 def creategui(image):
-    #for test purposes
-   
+    #for test purposes to record the time taken for the method to execute
+    #start = timer()
+    
+    #creating the GUI window with labels and buttons 
     window = tk.Tk()
     greeting = tk.Label(text="Hello, This GUI is designed to set up reference points for a tennis court")
     greeting.pack()
@@ -23,135 +36,79 @@ def creategui(image):
     spacelabel = tk.Label(text = " ")
     spacelabel.pack()
     
-#     userlabel= tk.Label(text="userID")    #user inputs his/her name
-#     pwlabel = tk.Label(text = "passsword")   #user inputs his/her email   
-    #courtlabel= tk.Label(text="Enter court number") 
-    #allowing user to input data 
-#     entry = tk.Entry()
-#     entry1 = tk.Entry()
-    #entry2 = tk.Entry() 
-
-#     userlabel.pack()
-#     entry.pack()
-#     pwlabel.pack()
-#     entry1.pack()
-    #courtlabel.pack()
-    #entry2.pack()
-    spacelabel.pack()
+    #label with instructions for user to know hoe to select reference points
     label=tk.Label(text="Select reference points for each tennis court respectively. Start with court 0. The 4 optimal references are the 4 corner points of a court")
     label.pack()
     
-    #get userid and password, compare to authenticate user
-    #if user is authenticated, buttons will appear 
+    #The following methods are defined and called when a specific button is pressed in the GUI
     
-    #def reset():
-        #none
+    #refcall calls the method ref from courtreference.py with parameter image to be processed
+    #This method displays the image and records the coordinate of any mouse click in an array
+    #the mouse clicks are the reference points chosen
     def refcall():
         ref(image)
-    def delete():
-        print("deleting")
-    
-    #For test purposes, the camera instantly captures an image and allows user to set references 
-    #def captureimage():
-        #none
-    #saves the reference points in a database
+        
+    #delete0 deletes the reference point for tennis court with id 0 from the database courtdb
+    def delete0():
+        cursor.execute("DELETE FROM courtdb WHERE court = 0")  
+        dbconnect.commit()
+        
+    #delete1 deletes the reference point for tennis court with id 1 from the database courtdb
+    def delete1():
+        cursor.execute("DELETE FROM courtdb WHERE court = 1")  
+        dbconnect.commit() 
+
+    #save calls the method detectplayer from playerdetection.py
+    #detectplayer method makes use of the Mobilenet SSD object detection model to detect the number of players
+    #and update the playercount accordingly and upload it to the server
     def save():
-        #arrpt = getpts()
-        #image = getimage()
         detectplayer(image)
-        #print(arrpt)
-        #print(adapt_array(arrpt))
-        #cursor.execute("INSERT INTO courtdatabase (court,points) VALUES (?,?)", (1,adapt_array(arrpt)))
-        #dbconnect.commit()
-    
+        
+        #for testing purposes, records the time taken for the method to be processed
+        #elapsed_time = timer() - start
+        #print("time", elapsed_time)
+
+    #setupc0 calls the method refcall which will display the image and allow user to select reference points by clicking on the image
+    #method getpts() is called from courtreference.py to obtain an array containing all the reference points selected in the image
+    #the database is then updated with the obtained array in the row where the court is 0
+    #resetarr is called from courtreference.py to clear the array meant to store points for court 0 so that previous points are not stored as well when new points are selected
     def setupc0():
         refcall()
         arrpt = getpts()
-        print(arrpt)
-        #getpts()
         cursor.execute('''UPDATE courtdb SET points = ? WHERE court= 0''',[str(arrpt)])             
         dbconnect.commit()
         resetarr()
-        #print(type(arrpt))
-        #court0_coord = arrpt
-        #updatecourtsarr(court0_coord)
-        #setcoord(court0_coord)
-        #string = "'" + arrpt + "'"
-        #print(string)
-        
-        
-        #cursorpostgres.execute('''UPDATE court_db SET courtcoordinates = arrpt WHERE courtid=1''')
-        #con.commit()
-        
+
+    #setupc1 has the same use as setupc0, except the database is then updated with the obtained array in the row where the court is 1
     def setupc1():
         refcall()
         arrpt = getpts()
-        #print(arrpt)
-        #getpts()
-        #resetarr()
-        #court1_coord = arrpt
-        #setcoord(court1_coord)
-        #updatecourtsarr(court1_coord)
-        #[adapt_array(arrpt)]
-        #string = "'" + arrpt + "'"
         cursor.execute('''UPDATE courtdb SET points = ? WHERE court=1''',[str(arrpt)])             
         dbconnect.commit()
         resetarr()
-        
-        #cursorpostgres.execute('''UPDATE court_db SET courtcoordinates = arrpt WHERE courtid=2''')
-        #con.commit()
          
-#         #newarrpt = np.reshape(arrpt, (maxcourt, 4))
-#         print(arrpt)
-#         print(type(arrpt[0][0]))
-#         cursor.execute("INSERT INTO database (court,x1,y1,x2,y2,x3,y3,x4,y4) VALUES (?,?,?,?,?,?,?,?,?)", (1,(arrpt[0][0]),(arrpt[0][1]),(arrpt[1][0]),(arrpt[1][1]),(arrpt[2][0]),(arrpt[2][1]),(arrpt[3][0]),(arrpt[3][1])))
-#         dbconnect.commit()
-#         cursor.execute("INSERT INTO database (court,x1,y1,x2,y2,x3,y3,x4,y4) VALUES (?,?,?,?,?,?,?,?,?)", (2,(arrpt[4][0]),(arrpt[4][1]),(arrpt[5][0]),(arrpt[5][1]),(arrpt[6][0]),(arrpt[6][1]),(arrpt[7][0]),(arrpt[7][1])))
-#         dbconnect.commit()
-        
-    
-    #button0 =  tk.Button(window,text = "Enter Court Number",command = courtnum)
-    #button0.pack()
-    #button =  tk.Button(window,text = "Set Up Reference",command = refcall)
-    #button.pack()
-    #spacelabel.pack()
+    #The following code are to create buttons for the GUI and command is the method to be called when a specific button is selected on the GUI
     buttonc1 =  tk.Button(window,text = "Set Up court0",command = setupc0)
     buttonc1.pack()
     buttonc2 =  tk.Button(window,text = "Set Up court1",command = setupc1)
     buttonc2.pack()
-    button1 =  tk.Button(window,text = "Delete Point",command = delete)
+    button1 =  tk.Button(window,text = "Delete court0 points",command = delete0)
     button1.pack()
-    spacelabel.pack()
+    button3 =  tk.Button(window,text = "Delete court1 points",command = delete1)
+    button3.pack()
     button2 =  tk.Button(window,text = "OK",command = save)
     button2.pack()
-    #button3 =  tk.Button(window,text = "START SOFTWARE",command = start)
-    #button3.pack()
-    
-#     def updatecourtsarr(arr):
-#         courts_coord.append(arr)
-#         print(courts_coord)
-#         setcoord(courts_coord)
-#         
-    #def getcourtscoord():
-    #   return courts_coord
-        
-
-#the following method displays the image captured when the setup button is clicked on the gui
-#user is allowed to click 4 reference points of the tennis court on the image
-#when the image is clicked, the coordinates of that point is stored
 
     window.mainloop()
-    
-# def getallcourtscoord():
-#     if len(court_coord) != 0:
-#     #coord = getcourtscoord()
-#         print("retrieved", courts_coord)
-#     return courts_coord
 
+
+#the main function that calls the methos creategui when tenniscourt_gui.py is executed.
 if __name__=="__main__":
-    #listimg = ['2court058.jpg', 'playingr306.jpg', ' playingr326.jpg', 'playingr337.jpg','playingr364.jpg', 'playingr383.jpg','playingr391.jpg']
-    #for image in listimg:
-    #PXL_20211002_153900787.MP.jpg #'PXL_o35112351235.png'
+    #For test purposes
+    #list of images for testing ['2court058.jpg', 'playingr306.jpg', ' playingr326.jpg', 'playingr337.jpg','playingr364.jpg', 'playingr383.jpg','playingr391.jpg']
+    
+    #currently GUI is set to process the image '2court058.jpg'
+    #the image name can be changed to test for different images 
     gui = creategui('2court058.jpg')
-    #getallcourtscoord()
+    
         

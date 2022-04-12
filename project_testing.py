@@ -1,22 +1,31 @@
+#Chhavi Sujeebun, updated
+#imporint required libraries and methods from other python scripts 
 import pandas as pd
 import numpy as np
 import cv2
-#from persondetection_dnn import *
+from persondetection_dnn import *
 from playerdetection import *
-from person import *
+from persondetection_hog import *
 import ast
 import json
-initialimage = " "
-initial = False
-totaliou=[]
 import csv
+#stores iou for each image 
+totaliou=[]
 
 
-#write to csv file
+
+#write to csv file for testing purposes
+#@param confidence is the confidence theshold used in the object detection model
+#@param iou is the iou calculated for persons in the dataset
+#@param precision is the precision calculated for persons inthe dataset
+#@recall is the recall calculated for persons in the dataset
+#@playeriou is the iou calculated for players in the dataset
+#@playerprec is the precision calculated for players in the dataset
+#@playerrec is the precision calculated for players inthe dataset
 def writecsv(confidence,iou,precision,recall,playeriou,playerprec,playerrec):
     data = []
-    #header =['confidence','iou','precision','recall','playeriou','playerprecision','playerrecall']
-    f = open('test_result_hog.csv', 'a')
+    
+    f = open('test_result.csv', 'a')
     data.append(confidence)
     data.append(iou)
     data.append(precision)
@@ -26,9 +35,13 @@ def writecsv(confidence,iou,precision,recall,playeriou,playerprec,playerrec):
     data.append(playerrec)
     writer = csv.writer(f)
     writer.writerow(data)
-#read annotated json file to form tennis court polygons 
+    
+#read annotated json file to retrieve tennis court reference points and form tennis court polygons
+#@param imagename is the imagename for which tennis court reference points must be read
+#@return arrays containg the xy coordinates of each tennis court 
 def gettenniscourt(imagename):
     t = 0
+    #stores x,y coordinates of tennis courts 
     x_coord = []
     y_coord = []
     x1_coord = []
@@ -41,14 +54,15 @@ def gettenniscourt(imagename):
     y2_coord = []
     x3_coord = []
     y3_coord = []
+    
     #opening json file
-    #'tennistest.json'
+    #reads the x and y coordinates for each tennis court
     f = open('tennistest_updated.json')
     data = json.load(f)
     x_coord = data[imagename]['regions']['0']['shape_attributes']['all_points_x']
     y_coord = data[imagename]['regions']['0']['shape_attributes']['all_points_y']
     
-    #checks if there are more than 1 polygon
+    #checks if there are more than 1 tennis court in the image and attempts to read them if they exist
     try:
         x_1coord = data[imagename]['regions']['1']['shape_attributes']['all_points_x']
         y_1coord = data[imagename]['regions']['1']['shape_attributes']['all_points_y']
@@ -68,7 +82,8 @@ def gettenniscourt(imagename):
     except:
         x_3coord = []
         y_3coord = []
-    
+        
+    #stores the coordinates as an array of tuples 
     if(len(x_coord)!= 0):
         for i in range(len(x_coord)):
             xy_coord.append((x_coord[i],y_coord[i]))
@@ -87,6 +102,11 @@ def gettenniscourt(imagename):
 
     return xy_coord, xy1_coord, xy2_coord, xy3_coord
 
+#testing for players detected by calculating the iou, precision and recall
+#@param imagename is the image being processed
+#@param imageboxes is the array of annotated ground truth bounding boxes read from csv file
+#@param predboxes is the array of predicted bounding boxes from the object detction models
+#@rteurn average iou, precision and recall for players in each image 
 def playertest(imagename,imageboxes,predboxes):
     annotatedplayers = []
     predplayers =[]
@@ -110,7 +130,8 @@ def playertest(imagename,imageboxes,predboxes):
             annotatedplayers = detectannotatedplayer(c,imageboxes)  
             #get player boxes for predicted boxes 
             predplayers = detectannotatedplayer(c,predboxes)
-            #print("ap,pp",annotatedplayers,predplayers)
+            
+            #calculates the iou,precision,recall using ground truth and predicted player boxes
             if(predplayers != []):
                 if(annotatedplayers != []):
                     iou,precision,recall = ioumany(annotatedplayers,predplayers)
@@ -120,9 +141,9 @@ def playertest(imagename,imageboxes,predboxes):
             else:
                 continue
     if len(playeriou) == 0:
-        #print("i,p,r using formula", 0, prec, rec)
         return 0,0,0
-            
+           
+    #calculates the average iou, precision and recall
     avgiou = sum(playeriou)/len(playeriou)
     avgprecision = sum(playerprecision)/len(playerprecision)
     avgrecall = sum(playerrecall)/len(playerrecall)
@@ -131,29 +152,21 @@ def playertest(imagename,imageboxes,predboxes):
     
             
             
-#calculates the iou
+#calculates the iou for ground truth and predicted bounding boxes
+#@param imageboxes is an array of ground truth boxes
+#@param predboxes is an array of predicted boxes from the model
+#@return the average iou, precision and recall
 def ioumany(imageboxes, predboxes):
     temp =[]
-    
-    #returnlist =[]
-#     tp= 0
-#     fn = 0
-#     fp = 0
-#     precision = 0
-#     recall = 0
-    #fp = 0
     imageboxmatch = []
     predboxmatch = []
     
     #precision = True positive/total persons predicted
     #recall = True positive/ total persons expected from annotations
     #True positive is when iou > 0.45
-    #iouval = -1
-       #a is imageboxes
-    print("img boxes", imageboxes)
-    print("pred boxes", predboxes)
-    # returns None if rectangles don't intersect
-  #initialimage = getinitialimage(
+    
+#returns None if rectangles don't intersect
+
     if len(imageboxes) == 0 and len(predboxes) == 0:
         print("i,p,r", 1,1,1)
         return 1,1,1
@@ -167,16 +180,12 @@ def ioumany(imageboxes, predboxes):
         return 0,0,0
         #break
     else:
-        
+        #loops through the arrays and calculates the iou for each pair of boxes, only selects iou >= 0.45
         for a in imageboxes:
             for b in predboxes:
-            
-                #checking if expected bounding boxes is none and predicted is none, iou,prec,rec = 1 else 0
-                #print("len a", len(a))
-                #print("len b", len(b))
         
-                print("a",a)
-                print("b",b)            
+                #print("a",a)
+                #print("b",b)            
                 #print("a 0....3",a[0],a[1],a[2],a[3])
                 #print("b 0....3",b[0],b[1],b[2],b[3])
                 dx = min(a[0]+a[2], b[0]+b[2]) - max(a[0], b[0])
@@ -191,19 +200,14 @@ def ioumany(imageboxes, predboxes):
                 iou = interArea / (boxAArea + boxBArea - interArea)
                 print("iou", iou)
                 if iou >= 0.45:
-                    temp.append(iou)
-                    #tp += 1
-                    #fp += 0
-                    imageboxmatch.append(a)
-                    predboxmatch.append(b)
-                #if iou > 0.6:
-                    #iou_dnn = iou
+                    temp.append(iou) #temp stores the iou of detections in the image 
+                    imageboxmatch.append(a) #imageboxmatch stores the ground truth box 
+                    predboxmatch.append(b) #predboxmatch stores the pred box
                 else:
-                    #tp += 0
-                    #fp += 1
                     continue
                 
-
+        #the True positive, False positive and False negative are computed as shown below and
+        #are further used to calculate the precision and recall
         tp = len(imageboxmatch)
         print("tp",tp)
         if tp == 0:
@@ -216,13 +220,9 @@ def ioumany(imageboxes, predboxes):
             precision = tp/(tp+fp)
             recall = tp/(tp+fn)
 
-            #precision = tp/len(predboxes)
-            #recall = tp/len(imageboxes)
-            #print("tp", tp)
-            #print("tpp", tp)
                     
-            if len(temp) == 0:
-                #print("i,p,r using formula", 0, prec, rec)
+            if len(temp) == 0: #no overlap >=0.45 with the ground truth and predicted boxes
+                
                 print("i,p,r", 0, precision, recall)
                 print("____________________________________")
                 return 0,precision,recall
@@ -231,32 +231,17 @@ def ioumany(imageboxes, predboxes):
         
                 
             avgiou = sum(temp)/len(temp)
-            #returnlist.append(avgiou)
-            #returnlist.append(precision)
-            
-            
-            #tp = 0
-                    #else:
-                    #    iouval = sum(temp)/len(temp)
-                       
-                    #totaliou.append(iou)
-                        #print("iou", iou)  
-            #avg_iou_dnn= sum(totaliou)/len(totaliou)
-            #print("iou", avg_iou_dnn)
-            #print("temp", temp)
             print("i,p,r", avgiou, precision, recall)
-            #print("i,p,r using formula", avgiou, prec, rec)
+            
             print("____________________________________")
-            #return avgiou,precision #,recall
+            
             return avgiou,precision,recall
-            #break
-    
-    #imgperson.clear()
-    #totaliou.clear()
-#return totaliou
-  #return interArea / (boxAArea + boxBArea - interArea)
 
-def annotated(filename,stride, padding, scale):
+#@param filename is the csv file containing annotated grounf truth boxes 
+#@param confidence is the confidence threshold for the Mobilenet SSD object detection model
+#ground truth boxes are read from csv file and predicted boxes are generated by calllig the model
+#iou, precision and recall is calculated for the dataset using the abopve methods 
+def annotated(filename,confidence):
     totalimageiou=[]
     precision = []
     recall = []
@@ -269,23 +254,21 @@ def annotated(filename,stride, padding, scale):
         data = annotateddata.iloc[i]
         imagename = data["imgname"]
         imagebox = data["persons"]
-        #print("imgbox", imagebox)
-        #print("as",ast.literal_eval(imagebox))
         print("imgname", imagename)
-        #print("imgb", ast.literal_eval(imagebox))
-        #print("t",type(imagebox))
-        #personboxes = testdetectperson(imagename,confidence)
+        
+        #testing is done using both MobilenetSSD and HOG 
+        personboxes = testdetectperson(imagename,confidence)
         
         #using hog
-        #update the path
-        newpath = "C:\Users\chhav\OneDrive\Documents\WINTER 2022\4th year project\Project_codes\Images_sorted_updated/" + imagename
-        personboxes= detectperson(newpath,stride, padding, scale)
+        #newpath = "/home/pi/Project_codes/Images_sorted_updated/" + imagename
+        #= detectperson(newpath,stride, padding, scale)
         #print("persons detected",personboxes)
         
         #calculating iou for person boxes
         
         iou,prec,rec = ioumany(ast.literal_eval(imagebox),personboxes)
         print("iou person",iou,prec,rec)
+        
         #player test for each image
         
         player_iou,playerprec,playerrec = playertest(imagename,ast.literal_eval(imagebox),personboxes)
@@ -293,16 +276,13 @@ def annotated(filename,stride, padding, scale):
         playeriou.append(player_iou)
         playerprecision.append(playerprec)
         playerrecall.append(playerrec)
-        #print("RL",returnedlist)
-        #iou = returnedlist[0]
-        #prec = returnedlist[1]
-        #print("i,p,r",iou, prec, rec)
+
         totalimageiou.append(iou)
         precision.append(prec)
         recall.append(rec)
 
         
-        
+    #the average iou,precision and recall is calculated for persons and palyers detected in the dataset
     averageiou = sum(totalimageiou)/len(totalimageiou)
     averageprecision = sum(precision)/len(precision)
     averagerecall = sum(recall)/len(recall)
@@ -310,169 +290,38 @@ def annotated(filename,stride, padding, scale):
     avgplayerprecision = sum(playerprecision)/len(playerprecision)
     avgplayerrecall = sum(playerrecall)/len(playerrecall)
     
-    #print("total", totalimageiou)
+    
     print("average iou for person detection using dnn: ", averageiou)
     print("average precision: ", averageprecision)
     print("average recall: ", averagerecall)
     print("average player iou:", avgplayeriou)
     print("average player precision: ", avgplayerprecision)
     print("average player recall: ", avgplayerrecall)
-    writecsv(scale,averageiou,averageprecision,averagerecall,avgplayeriou,avgplayerprecision,avgplayerrecall)
-#     annotateddata = pd.read_csv(filename)
-#     #print(annotateddata.columns)
-#     imagebox = [] #bounding box of an image
-#     #imagebox2 = []
-#     #multipleimagebox = []
-#     totalimageiou=[]    
-#     #imagenames = annotateddata["imgname"]
-#     #print(imagenames.head)
-#     #imagebox = annotateddata[["x","y","w","h"]]
-#     #print(imagebox.head)
-#     for i in range(annotateddata.shape[0]): #shape[0] gives the total number of rows in the file
-#         
-#         imagebox.clear()
-#         
-#         data = annotateddata.iloc[i]
-#         #done = False
-#         imagename = data["imgname"]
-#         imagebox.append(data["x"])
-#         imagebox.append(data["y"])
-#         imagebox.append(data["w"])
-#         imagebox.append(data["h"])
-#         
-#         personboxes = testdetectperson(imagename) #boxes retuned from dnn
-#         #personboxes = [648,416,36,80]
-#         #print("type",type(personboxes))
-#         #print("pbox",personboxes)
-#         #print("size", annotateddata.shape[0]-1)
-#         if (i < annotateddata.shape[0]):
-#             totalimageiou.append(ioumany(imagebox,personboxes))
-#             
-#         averageiou = sum(totalimageiou)/len(totalimageiou)
-#         print("total", totalimageiou)
-#         print("average iou for person detection using dnn: ", averageiou)
-    
-def readannotated(filename):#"annotation_piimages.csv"
-   
-    annotateddata = pd.read_csv(filename)
-    #print(annotateddata.columns)
-    imagebox = [] #bounding box of an image
-    imagebox2 = []
-    multipleimagebox = []
-    totalimageiou=[]    
-    #imagenames = annotateddata["imgname"]
-    #print(imagenames.head)
-    #imagebox = annotateddata[["x","y","w","h"]]
-    #print(imagebox.head)
-    for i in range(annotateddata.shape[0]): #shape[0] gives the total number of rows in the file
-        
-        imagebox.clear()
-        imagebox2.clear()
-        data = annotateddata.iloc[i]
-        #done = False
-        imagename = data["imgname"]
-        imagebox.append(data["x"])
-        imagebox.append(data["y"])
-        imagebox.append(data["w"])
-        imagebox.append(data["h"])
-        
-        personboxes = testdetectperson(imagename) #boxes retuned from dnn
-        #personboxes = [648,416,36,80]
-        print("type",type(personboxes))
-        print("pbox",personboxes)
-        print("size", annotateddata.shape[0]-1)
-        if (i < annotateddata.shape[0]):
-            if(i == annotateddata.shape[0]-1):
-                totalimageiou.append(ioumany([imagebox],personboxes))
-                averageiou = sum(totalimageiou)/len(totalimageiou)
-                print("total", totalimageiou)
-                print("average iou for person detection using dnn: ", averageiou)
-            else:          
-                nextdata = annotateddata.iloc[i+1]
-                nextimagename = nextdata["imgname"]
-                #print("nxtimgname", nextimagename)
-               
-               # data[["x","y","w","h"]] #boxes returned from image in csv file
-                print("___________________________________") 
-                print("imgname", imagename)
-                print("nxtimgname", nextimagename)
-                print("imgbox", imagebox)
-                
-                if(imagename == nextimagename):
-                    data2 = annotateddata.iloc[i+1]          
-                    imagebox2.append(data2["x"])
-                    imagebox2.append(data2["y"])
-                    imagebox2.append(data2["w"])
-                    imagebox2.append(data2["h"])
-                    
-                    same= True
-                    print("s", same)
-                    #if the current image and next image are same, build an array of the bounding boxes 
-                    multipleimagebox.append(imagebox)
-                    multipleimagebox.append(imagebox2)
-                    print("morebox", multipleimagebox)
-#                     if(i <= annotateddata.shape[0]-2):
-#                         nextdata2 = annotateddata.iloc[i+2]
-#                         nextimagename2 = nextdata2["imgname"]
-#                         if(imagename == nextimagename2):
-#                             same = True
-#                             print("ss", same)
-#                             continue
-#                         else:
-#                             same = False
-#                             print("ss", same)
-#                             totalimageiou.append(ioumany(multipleimagebox,personboxes))
-#                             print("total1", totalimageiou)
-                            #multipleimagebox.clear()
-                    #else:
-                    #    continue
-                    #iou(True,imagebox,personboxes)
-                else:
-                    same = False                    
-                    #multipleimagebox.append(imagebox)          
-                    totalimageiou.append(ioumany([imagebox],personboxes))
-                    print("total2", totalimageiou)
-                    multipleimagebox.clear()
-                
-        
-            
+    #writes the data in s csv file
+    writecsv(confidence,averageiou,averageprecision,averagerecall,avgplayeriou,avgplayerprecision,avgplayerrecall)
 
-        
-       
-        #print([imagebox])
-        #total_iou.append(iou(imagename,imagebox,personboxes))
-    #avg_iou_dnn= np.mean(total_iou)
-    #print("Average iou for deep Learning is: ", avg_iou_dnn)
-        
-def initialimage(imagename):
-    initialimage = imagename 
-def getinitialimage():
-    if initialimage != " ":
-        return imagename
+#@param imagename is the imagename to be processed
+#@param confidence is the confidence threshold
+#calls the Mobilenet SSD model to peform object detection on specific images
+#@return the bounding boxes of persons detected using Mobilenet SSD
 def testdetectperson(imagename,confidence):
     path = "/home/pi/Project_codes/Images_sorted_updated/"
-    newpath = path + imagename
-    #print(newpath)
+    newpath = path + imagename    
     personboxes_dnn = detectpersondnn(newpath,confidence)
-    #print("t",type(personboxes_dnn))
-    #print("tp",personboxes_dnn)
     return personboxes_dnn
-    ##"[[644,415,50,91]]",210middle00001.jpg
+
+#main code to run annotated method for different parameters
 if __name__=="__main__":
-    #readannotated("annotation_piimages2.csv")
-    #"annotation_piimages1.csv" #"annotation_updated.csv"
-    stride = (2,2)
-    padding = (4,4)
+    
+    #stride = (2,2)
+    #padding = (4,4)
     #conf = [0.53,0.54,0.55,0.56,0.57,0.58,0.59,0.60] #0.45, 0.5,0.51,0.52,0.61,0.62,0.63,0.5,0.65,
     #conf = [0.71,0.72,0.72,0.73,0.74,0.75,0.8,0.81,0.82,0.83,0.85,0.87,0.9,1.0]
-    #scale
-    scale = [1,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2,2.1,2.2,2.3,2.4,2.5,3,3.5,4]
-    for c in scale:
+    conf = [0.1,0.2,0.3]
+    #scale = [1,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2,2.1,2.2,2.3,2.4,2.5,3,3.5,4]
+    for c in conf:
         print("c",c)
         #annotated(filename,stride, padding, scale)
-        annotated("annotation_updated.csv",stride,padding,c)
-    #annotated("a3.csv")
-    #img = cv2.imread("/home/pi/Project_codes/Images_sorted/2court013.jpg")
-    #cv2.imshow('test', img)
-#   average iou for person detection using dnn:  0.5927923519988099
+        annotated("annotation_updated.csv",c)
+   
 
