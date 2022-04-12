@@ -5,6 +5,8 @@ A camera sensor is wired to a raspberry pi via the camera port and it has been c
 Tennis courts will be equipped with camera sensors such that we have a maximum of two tennis courts per camera sensor to ensure that the camera can capture quality photos to perform object detection for the occupancy of the tennis facility. It will capture images of the courts every ten minutes. To set up the system, an authorized user will have to access a graphical user interface in the raspberry pi to set up reference points for the tennis courts captured by the camera. These reference points are then added to an array and stored in a database. The camera is then set to capture images every ten minutes, the captured images will then be processed on the raspberry pi to detect the number of people in each image. The tennis court reference points and person detection data will then be further used to identify the number of  players on each tennis court. 
 The number of players on a tennis court will  be sent to the server. The server will update its database and data from the database will be accessed by the app so that users can get current occupancy of the court.
 
+Currently the code processes images from our dataset, however if the system is to be implemented, it will process real-time images captured by the camera every 10 minutes.
+
 #### Image Processing 
 After an image is captured by the set-up camera, it is processed on the raspberry pi for person and tennis court detection. The data obtained from person and tennis court detection are further used to differentiate between players and spectators as our goal is to detect the number of players on a tennis court and update the real-time occupancy of that tennis court.
 #### Person Detection 
